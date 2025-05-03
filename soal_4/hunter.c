@@ -7,18 +7,15 @@
 
 #define SEM_KEY 5678
 
-// Global variables
 int shmid;
 struct SystemData *shared_data;
 int semid;
 struct Hunter current_hunter;
 int logged_in = 0;
 
-// Notification system
 atomic_int notification_on = 0;
 pthread_t notif_thread;
 
-// Function declarations
 void init_shared_memory();
 void init_semaphore();
 void lock();
@@ -426,7 +423,7 @@ void hunter_menu() {
 }
 
 void logout() {
-    shmdt(shared_data);  // Detach dari shared memory
+    shmdt(shared_data); 
     logged_in = 0;
 }
 
