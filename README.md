@@ -1,4 +1,4 @@
-# Laporan Praktikum Modul 1
+# Laporan Praktikum Modul 3
 
 ## Nama Anggota
 
