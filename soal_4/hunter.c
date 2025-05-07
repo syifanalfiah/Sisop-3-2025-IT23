@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <poll.h>
 #include <unistd.h>
+#include <stdatomic.h>
 
 #define SEM_KEY 5678
 
