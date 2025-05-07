@@ -13,7 +13,6 @@
 #define BUFFER_SIZE 4096
 #define SECRETS_DIR "secrets"
 
-// Function to create hex string from file content
 void file_to_hex(const char *path, char **hex_output, size_t *hex_len) {
     FILE *file = fopen(path, "rb");
     if (!file) {
@@ -21,13 +20,11 @@ void file_to_hex(const char *path, char **hex_output, size_t *hex_len) {
         *hex_output = NULL;
         return;
     }
-    
-    // Get file size
+
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
-    
-    // Allocate buffer for file content
+
     unsigned char *file_content = malloc(file_size);
     if (!file_content) {
         perror("Memory allocation failed");
@@ -35,12 +32,10 @@ void file_to_hex(const char *path, char **hex_output, size_t *hex_len) {
         *hex_output = NULL;
         return;
     }
-    
-    // Read file
+
     size_t bytes_read = fread(file_content, 1, file_size, file);
     fclose(file);
-    
-    // Allocate buffer for hex string (2 chars per byte + null terminator)
+
     *hex_len = bytes_read * 2 + 1;
     *hex_output = malloc(*hex_len);
     if (!*hex_output) {
@@ -48,8 +43,7 @@ void file_to_hex(const char *path, char **hex_output, size_t *hex_len) {
         free(file_content);
         return;
     }
-    
-    // Convert to hex string
+
     char *hex_ptr = *hex_output;
     for (size_t i = 0; i < bytes_read; i++) {
         sprintf(hex_ptr, "%02x", file_content[i]);
@@ -96,8 +90,7 @@ void upload_file(int sock, const char *filename) {
     snprintf(fullpath, sizeof(fullpath), "%s/%s", SECRETS_DIR, filename);
     
     printf("Trying to open: %s\n", fullpath);
-    
-    // Get hex data from file
+
     char *hex_data;
     size_t hex_len;
     file_to_hex(fullpath, &hex_data, &hex_len);
@@ -106,12 +99,10 @@ void upload_file(int sock, const char *filename) {
         printf("Failed to convert file to hex\n");
         return;
     }
-    
-    // Print a preview of the hex data
+
     printf("Hex data preview: %.40s...\n", hex_data);
-    
-    // Send the command with hex data
-    char *command = malloc(strlen(hex_data) + 9); // "DECRYPT " + hex_data + null
+
+    char *command = malloc(strlen(hex_data) + 9); 
     if (!command) {
         perror("Memory allocation failed");
         free(hex_data);
@@ -119,8 +110,7 @@ void upload_file(int sock, const char *filename) {
     }
     
     sprintf(command, "DECRYPT %s", hex_data);
-    
-    // Send in chunks if necessary (large files)
+
     size_t command_len = strlen(command);
     size_t total_sent = 0;
     
@@ -162,7 +152,6 @@ void download_file(int sock, const char *filename) {
     snprintf(command, sizeof(command), "DOWNLOAD %s", filename);
     send(sock, command, strlen(command), 0);
 
-    // Receive initial response
     char response[BUFFER_SIZE];
     int bytes_received = recv(sock, response, BUFFER_SIZE, 0);
     if (bytes_received <= 0) {
@@ -197,8 +186,7 @@ void download_file(int sock, const char *filename) {
             fwrite(buffer, 1, bytes_received, file);
             remaining -= bytes_received;
             total_received += bytes_received;
-            
-            // Show progress every 10%
+
             if (file_size > 0) {
                 int percent = (int)(total_received * 100 / file_size);
                 printf("\rDownloading: %d%% complete", percent);
@@ -216,8 +204,7 @@ void list_server_files(int sock) {
     char command[BUFFER_SIZE];
     strcpy(command, "LIST");
     send(sock, command, strlen(command), 0);
-    
-    // Receive response
+
     char response[BUFFER_SIZE];
     int bytes_received = recv(sock, response, BUFFER_SIZE, 0);
     if (bytes_received <= 0) {
@@ -257,8 +244,7 @@ void list_secrets_files() {
 
 void list_files() {
     list_secrets_files();
-    
-    // Try to connect to server to list files
+
     int sock = connect_to_server();
     if (sock >= 0) {
         list_server_files(sock);
@@ -273,16 +259,13 @@ void list_files() {
 void create_sample_file() {
     char path[PATH_MAX];
     snprintf(path, sizeof(path), "%s/sample.txt", SECRETS_DIR);
-    
-    // Create a simple text file with hex data
+
     FILE *file = fopen(path, "w");
     if (!file) {
         perror("Failed to create sample file");
         return;
     }
-    
-    // Write JPEG header and simple data
-    // FF D8 - JPEG start, FF DB - quantization table, etc.
+
     fprintf(file, "ffd8ffe000104a46494600010100000100010000ffdb004300"
                   "0a07070809070a090a0b0c100d0c0b0b0c1513181615131414"
                   "1a211e1d1a1d1d2024292c2e2c24272b2a2d2e2d1721323638"
@@ -297,8 +280,7 @@ int main() {
     printf("Current directory: ");
     system("pwd");
     create_directories();
-    
-    // Create a sample file if there are no files
+
     DIR *dir = opendir(SECRETS_DIR);
     if (dir) {
         struct dirent *entry;
@@ -329,12 +311,11 @@ int main() {
         
         int choice;
         if (scanf("%d", &choice) != 1) {
-            // Clear input buffer on error
             while (getchar() != '\n');
             printf("Invalid input. Please enter a number.\n");
             continue;
         }
-        while (getchar() != '\n'); // Clear input buffer
+        while (getchar() != '\n');
         
         if (choice == 5) break;
         
@@ -369,7 +350,7 @@ int main() {
             }
             case 3:
                 list_files();
-                continue; // Skip the socket close
+                continue;
             case 4:
                 create_sample_file();
                 continue;
