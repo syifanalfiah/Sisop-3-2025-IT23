@@ -10,6 +10,572 @@
 
 ## Soal No 1
 
+### Deskripsi
+
+Proyek ini merupakan sistem client-server yang memungkinkan pengguna untuk mengubah file teks rahasia menjadi file JPEG melalui proses dekripsi khusus. Sistem ini terdiri dari dua komponen utama:
+
+- `image_client.c`: Program client yang menyediakan antarmuka pengguna untuk mengunggah file teks, mendownload file JPEG hasil dekripsi, dan melihat daftar file yang tersedia.
+- `image_server.c`: Program server yang berjalan sebagai daemon, menerima permintaan dari client, melakukan proses dekripsi, dan menyimpan file hasil dekripsi.
+
+Sistem ini menggunakan socket RPC untuk komunikasi antara client dan server, dengan protokol khusus untuk perintah seperti DECRYPT, DOWNLOAD, dan LIST.
+
+### Struktur File
+
+```
+.
+├── client
+│   ├── [timestamp].jpeg (file hasil download)
+│   ├── image_client (binary)
+│   └── secrets
+│       ├── input_1.txt
+│       ├── input_2.txt
+│       ├── input_3.txt
+│       ├── input_4.txt
+│       └── input_5.txt
+├── image_client.c (source code client)
+├── image_server.c (source code server)
+└── server
+    ├── database
+    │   ├── [timestamp].jpeg (file hasil dekripsi)
+    │   └── ...
+    ├── image_server (binary)
+    └── server.log (log aktivitas server)
+```
+
+### Fungsi Utama Client
+
+### Inisialisasi Direktori dan Koneksi
+
+```c
+#define PORT 8080
+#define BUFFER_SIZE 4096
+#define SECRETS_DIR "secrets"
+
+void create_directories() {
+    struct stat st = {0};
+    if (stat(SECRETS_DIR, &st) == -1) {
+        printf("Creating secrets directory...\n");
+        if (mkdir(SECRETS_DIR, 0755) != 0) {
+            perror("Failed to create secrets directory");
+            exit(1);
+        }
+    }
+}
+
+int connect_to_server() {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        printf("Failed to create socket\n");
+        return -1;
+    }
+
+    struct sockaddr_in server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        printf("Failed to connect to server\n");
+        return -1;
+    }
+
+    return sock;
+}
+```
+
+Fungsi-fungsi ini bertanggung jawab untuk:
+- Membuat direktori 'secrets' jika belum ada
+- Membuat koneksi socket ke server pada port 8080
+- Menangani error jika gagal membuat koneksi
+
+### Konversi File ke Hex
+
+```c
+void file_to_hex(const char *path, char **hex_output, size_t *hex_len) {
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        perror("Error opening file");
+        *hex_output = NULL;
+        return;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *file_content = malloc(file_size);
+    if (!file_content) {
+        perror("Memory allocation failed");
+        fclose(file);
+        *hex_output = NULL;
+        return;
+    }
+
+    size_t bytes_read = fread(file_content, 1, file_size, file);
+    fclose(file);
+
+    *hex_len = bytes_read * 2 + 1;
+    *hex_output = malloc(*hex_len);
+    if (!*hex_output) {
+        perror("Memory allocation failed");
+        free(file_content);
+        return;
+    }
+
+    char *hex_ptr = *hex_output;
+    for (size_t i = 0; i < bytes_read; i++) {
+        sprintf(hex_ptr, "%02x", file_content[i]);
+        hex_ptr += 2;
+    }
+    *hex_ptr = '\0';
+
+    free(file_content);
+}
+```
+
+Fungsi ini:
+- Membaca file biner dari path yang diberikan
+- Mengkonversi setiap byte menjadi representasi hexadecimal (2 karakter per byte)
+- Mengalokasikan memori untuk menyimpan hasil konversi
+- Mengembalikan string hex melalui parameter output
+
+### Upload File untuk Dekripsi
+
+```c
+void upload_file(int sock, const char *filename) {
+    char fullpath[PATH_MAX];
+    snprintf(fullpath, sizeof(fullpath), "%s/%s", SECRETS_DIR, filename);
+
+    printf("Trying to open: %s\n", fullpath);
+    char *hex_data;
+    size_t hex_len;
+    file_to_hex(fullpath, &hex_data, &hex_len);
+
+    if (!hex_data) {
+        printf("Failed to convert file to hex\n");
+        return;
+    }
+
+    printf("Hex data preview: %.40s...\n", hex_data);
+
+    char *command = malloc(strlen(hex_data) + 9);
+    if (!command) {
+        perror("Memory allocation failed");
+        free(hex_data);
+        return;
+    }
+
+    sprintf(command, "DECRYPT %s", hex_data);
+    size_t command_len = strlen(command);
+
+    size_t total_sent = 0;
+    while (total_sent < command_len) {
+        ssize_t sent = send(sock, command + total_sent, command_len - total_sent, 0);
+        if (sent < 0) {
+            perror("Error sending data");
+            free(hex_data);
+            free(command);
+            return;
+        }
+        total_sent += sent;
+        printf("Sent %zu of %zu bytes\r", total_sent, command_len);
+        fflush(stdout);
+    }
+
+    printf("\nAll data sent successfully.\n");
+    free(hex_data);
+    free(command);
+
+    char response[BUFFER_SIZE];
+    int bytes_received = recv(sock, response, BUFFER_SIZE, 0);
+    if (bytes_received <= 0) {
+        printf("Error: No response from server\n");
+        return;
+    }
+
+    response[bytes_received] = '\0';
+    if (strncmp(response, "OK", 2) == 0) {
+        printf("Success! File saved as: %s\n", response + 3);
+    } else {
+        printf("Error: %s\n", response);
+    }
+}
+```
+
+Fungsi ini:
+- Membaca file dari direktori 'secrets'
+- Mengkonversi isi file ke format hex
+- Mengirim perintah DECRYPT ke server beserta data hex
+- Menangani pengiriman data secara bertahap untuk file besar
+- Menerima dan menampilkan respon dari server
+
+### Download File dari Server
+
+```c
+void download_file(int sock, const char *filename) {
+    char command[BUFFER_SIZE];
+    snprintf(command, sizeof(command), "DOWNLOAD %s", filename);
+    send(sock, command, strlen(command), 0);
+
+    char response[BUFFER_SIZE];
+    int bytes_received = recv(sock, response, BUFFER_SIZE, 0);
+    if (bytes_received <= 0) {
+        printf("Error: No response from server\n");
+        return;
+    }
+
+    response[bytes_received] = '\0';
+
+    printf("Server response: %s\n", response);
+    if (strncmp(response, "OK", 2) == 0) {
+        long file_size = atol(response + 3);
+        printf("Downloading %s (%ld bytes)...\n", filename, file_size);
+
+        char output_path[PATH_MAX];
+        snprintf(output_path, sizeof(output_path), "%s", filename);
+        FILE *file = fopen(output_path, "wb");
+        if (!file) {
+            perror("Error creating file");
+            return;
+        }
+
+        long remaining = file_size;
+        long total_received = 0;
+        char buffer[BUFFER_SIZE];
+        while (remaining > 0) {
+            bytes_received = recv(sock, buffer, 
+                (remaining < BUFFER_SIZE) ? remaining : BUFFER_SIZE, 0);
+            if (bytes_received <= 0) break;
+            fwrite(buffer, 1, bytes_received, file);
+            remaining -= bytes_received;
+            total_received += bytes_received;
+            if (file_size > 0) {
+                int percent = (int)(total_received * 100 / file_size);
+                printf("\rDownloading: %d%% complete", percent);
+                fflush(stdout);
+            }
+        }
+        fclose(file);
+        printf("\nDownload complete! Saved as %s\n", filename);
+    } else {
+        printf("Error: %s\n", response);
+    }
+}
+```
+
+Fungsi ini:
+- Mengirim perintah DOWNLOAD ke server dengan nama file yang diminta
+- Menerima respon ukuran file dari server
+- Menerima data file secara streaming dan menyimpannya ke disk
+- Menampilkan progress download dalam persentase
+
+### Fungsi Tambahan Client
+
+```c
+void list_server_files(int sock) {
+    char command[BUFFER_SIZE];
+    strcpy(command, "LIST");
+    send(sock, command, strlen(command), 0);
+
+    char response[BUFFER_SIZE];
+    int bytes_received = recv(sock, response, BUFFER_SIZE, 0);
+    if (bytes_received <= 0) {
+        printf("Error: No response from server\n");
+        return;
+    }
+
+    response[bytes_received] = '\0';
+    if (strncmp(response, "OK", 2) == 0) {
+        printf("\nAvailable JPEG files on server:\n%s\n", response + 3);
+    } else {
+        printf("Error retrieving server files: %s\n", response);
+    }
+}
+
+void list_secrets_files() {
+    printf("\nAvailable files in secrets directory:\n");
+    DIR *dir;
+    struct dirent *entry;
+    dir = opendir(SECRETS_DIR);
+    if (!dir) {
+        printf("Cannot open secrets directory\n");
+        return;
+    }
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) {
+            printf("- %s\n", entry->d_name);
+        }
+    }
+    closedir(dir);
+}
+
+void create_sample_file() {
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "%s/sample.txt", SECRETS_DIR);
+    FILE *file = fopen(path, "w");
+    if (!file) {
+        perror("Failed to create sample file");
+        return;
+    }
+
+    fprintf(file, "ffd8ffe000104a46494600010100000100010000ffdb004300"
+            "0a07070809070a090a0b0c100d0c0b0b0c1513181615131414"
+            "1a211e1d1a1d1d2024292c2e2c24272b2a2d2e2d1721323638"
+            "332c3632292c2d2bffc0000b08000a000a01010100ffda0008"
+            "01010000000000");
+    fclose(file);
+    printf("Created sample file: %s\n", path);
+}
+```
+
+Fungsi-fungsi ini menyediakan:
+- Daftar file JPEG yang tersedia di server
+- Daftar file teks yang tersedia di direktori 'secrets'
+- Pembuatan file sampel untuk percobaan
+
+## Fungsi Utama Server
+
+### Inisialisasi Server
+
+```c
+#define PORT 8080
+#define BUFFER_SIZE 4096
+#define LOG_FILE "server.log"
+#define DB_DIR "database"
+
+int server_socket = -1;
+int run_as_daemon = 0;
+
+void create_directories() {
+    struct stat st = {0};
+    if (stat(DB_DIR, &st) == -1) {
+        if (mkdir(DB_DIR, 0755) != 0) {
+            perror("Failed to create database directory");
+            exit(1);
+        }
+    }
+}
+
+void cleanup(int sig) {
+    if (server_socket >= 0) {
+        close(server_socket);
+    }
+    log_action("Server", "SHUTDOWN", "Server is shutting down");
+    exit(0);
+}
+```
+
+Fungsi-fungsi ini:
+- Membuat direktori 'database' untuk menyimpan file hasil dekripsi
+- Menangani shutdown server dengan membersihkan sumber daya
+- Mengatur server untuk berjalan sebagai daemon
+
+### Logging Aktivitas
+
+```c
+void log_action(const char *source, const char *action, const char *info) {
+    time_t now;
+    time(&now);
+    struct tm *tm_info = localtime(&now);
+    char timestamp[32];
+    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", tm_info);
+
+    FILE *log = fopen(LOG_FILE, "a");
+    if (log) {
+        fprintf(log, "[%s][%s]: [%s] [%s]\n", source, timestamp, action, info);
+        fclose(log);
+    }
+
+    if (!run_as_daemon) {
+        printf("[%s][%s]: [%s] [%s]\n", source, timestamp, action, info);
+    }
+}
+```
+
+Fungsi ini mencatat semua aktivitas server ke file log dengan format:
+`[Source][Timestamp]: [Action] [Info]`
+
+### Proses Dekripsi
+
+```c
+int hex_to_int(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+void clean_hex_string(char *str) {
+    char *src = str;
+    char *dst = str;
+    while (*src) {
+        if (isxdigit((unsigned char)*src)) {
+            *dst++ = *src;
+        }
+        src++;
+    }
+    *dst = '\0';
+}
+
+void handle_client(int client_socket) {
+    char buffer[BUFFER_SIZE];
+    char response[BUFFER_SIZE];
+
+    while (1) {
+        memset(buffer, 0, BUFFER_SIZE);
+        int bytes_received = recv(client_socket, buffer, BUFFER_SIZE, 0);
+        if (bytes_received <= 0) break;
+        buffer[bytes_received] = '\0';
+
+        if (strncmp(buffer, "DECRYPT", 7) == 0) {
+            log_action("Client", "DECRYPT", "Text data");
+            char *text_data = buffer + 8;
+
+            int len = strlen(text_data);
+            char *reversed_data = malloc(len + 1);
+            for (int i = 0; i < len; i++) {
+                reversed_data[i] = text_data[len - i - 1];
+            }
+            reversed_data[len] = '\0';
+
+            clean_hex_string(reversed_data);
+
+            len = strlen(reversed_data);
+            int max_decoded_len = len / 2;
+            unsigned char *decoded = (unsigned char *)malloc(max_decoded_len);
+            int decoded_len = 0;
+            
+            for (int i = 0; i < len; i += 2) {
+                if (i + 1 >= len) break;
+                int high = hex_to_int(reversed_data[i]);
+                int low = hex_to_int(reversed_data[i+1]);
+                if (high == -1 || low == -1) continue;
+                decoded[decoded_len++] = (high << 4) | low;
+            }
+            
+            free(reversed_data);
+
+            time_t now = time(NULL);
+            char filename[50];
+            snprintf(filename, sizeof(filename), "%s/%ld.jpeg", DB_DIR, now);
+            
+            FILE *file = fopen(filename, "wb");
+            if (file) {
+                fwrite(decoded, 1, decoded_len, file);
+                fclose(file);
+                snprintf(response, sizeof(response), "OK %ld.jpeg", now);
+                log_action("Server", "SAVE", filename);
+            } else {
+                strcpy(response, "ERROR Failed to save file");
+                log_action("Server", "ERROR", "Failed to save file");
+            }
+            
+            free(decoded);
+            send(client_socket, response, strlen(response), 0);
+        }
+        // ... (handling other commands)
+    }
+    close(client_socket);
+}
+```
+
+Proses dekripsi terdiri dari:
+1. Menerima data hex dari client
+2. Membalik urutan string hex
+3. Membersihkan karakter non-hex
+4. Mengkonversi hex ke binary
+5. Menyimpan hasil konversi sebagai file JPEG dengan nama timestamp
+
+### Fungsi Tambahan Server
+
+```c
+char* list_database_files() {
+    static char file_list[BUFFER_SIZE] = {0};
+    memset(file_list, 0, sizeof(file_list));
+    
+    DIR *dir;
+    struct dirent *entry;
+    dir = opendir(DB_DIR);
+    if (!dir) {
+        return "No files found";
+    }
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) {
+            char *ext = strrchr(entry->d_name, '.');
+            if (ext && strcmp(ext, ".jpeg") == 0) {
+                strcat(file_list, entry->d_name);
+                strcat(file_list, "\n");
+            }
+        }
+    }
+    closedir(dir);
+    return file_list;
+}
+```
+
+Fungsi ini mengembalikan daftar file JPEG yang tersedia di direktori 'database'
+
+## Cara Kompilasi dan Penggunaan
+
+### Kompilasi Program
+
+```bash
+gcc -o image_client image_client.c
+gcc -o image_server image_server.c
+```
+
+### Menjalankan Server
+
+```bash
+./image_server        # Mode foreground
+./image_server -f     # Mode daemon (background)
+```
+
+### Menjalankan Client
+
+```bash
+./image_client
+```
+
+### Menu Client
+
+Client menyediakan menu interaktif dengan pilihan:
+1. Upload dan decrypt file
+2. Download JPEG file
+3. List available files
+4. Create sample file
+5. Exit
+
+## Spesifikasi Berdasarkan Cerita Soal
+
+| Fitur | Deskripsi |
+|-------|-----------|
+| **Dekripsi File** | Mengubah file teks hex menjadi file JPEG melalui proses reverse dan decode hex |
+| **Download File** | Mengambil file JPEG hasil dekripsi dari server |
+| **Daftar File** | Menampilkan file teks yang tersedia untuk dekripsi dan file JPEG hasil dekripsi |
+| **Logging** | Mencatat semua aktivitas client dan server ke file log |
+| **Error Handling** | Menangani berbagai error seperti koneksi gagal, file tidak ditemukan, dll |
+| **Mode Daemon** | Server dapat berjalan di background sebagai daemon |
+
+## Alur Kerja Sistem
+
+1. Client membaca file teks dari direktori 'secrets'
+2. Client mengkonversi isi file ke format hex
+3. Client mengirim perintah DECRYPT beserta data hex ke server
+4. Server memproses data dengan:
+   - Membalik urutan string hex
+   - Membersihkan karakter non-hex
+   - Mengkonversi hex ke binary
+5. Server menyimpan hasil konversi sebagai file JPEG dengan nama timestamp
+6. Client dapat mendownload file JPEG hasil dekripsi dari server
+
+### Revisi
+
+### Dokumentasi
+
 ## Soal No 2
 
 ## Soal No 3
