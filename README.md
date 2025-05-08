@@ -633,8 +633,7 @@ gcc -o image_server image_server.c
 ### Menjalankan Server
 
 ```bash
-./image_server        # Mode foreground
-./image_server -f     # Mode daemon (background)
+./image_server
 ```
 
 ### Menjalankan Client
