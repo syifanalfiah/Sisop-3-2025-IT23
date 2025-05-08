@@ -335,7 +335,7 @@ Fungsi-fungsi ini menyediakan:
 - Daftar file teks yang tersedia di direktori 'secrets'
 - Pembuatan file sampel untuk percobaan
 
-## Fungsi Utama Server
+### Fungsi Utama Server
 
 ### Inisialisasi Server
 
@@ -518,7 +518,7 @@ char* list_database_files() {
 
 Fungsi ini mengembalikan daftar file JPEG yang tersedia di direktori 'database'
 
-## Cara Kompilasi dan Penggunaan
+### Cara Kompilasi dan Penggunaan
 
 ### Kompilasi Program
 
@@ -560,7 +560,7 @@ Client menyediakan menu interaktif dengan pilihan:
 | **Error Handling** | Menangani berbagai error seperti koneksi gagal, file tidak ditemukan, dll |
 | **Mode Daemon** | Server dapat berjalan di background sebagai daemon |
 
-## Alur Kerja Sistem
+### Alur Kerja Sistem
 
 1. Client membaca file teks dari direktori 'secrets'
 2. Client mengkonversi isi file ke format hex
