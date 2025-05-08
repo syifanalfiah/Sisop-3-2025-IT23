@@ -678,6 +678,33 @@ Client menyediakan menu interaktif dengan pilihan:
 
 ### Dokumentasi
 
+![image](https://github.com/user-attachments/assets/46a482bc-b54e-405f-8a28-9bdedebd0ba9)
+
+![image](https://github.com/user-attachments/assets/661320aa-23a6-4edb-9969-48919e344a52)
+
+![image](https://github.com/user-attachments/assets/5411069a-fdff-49c2-b3d8-7f0adfa17400)
+
+![image](https://github.com/user-attachments/assets/d9906f36-f0a3-42b6-b9d3-5ccbda58c520)
+
+![image](https://github.com/user-attachments/assets/730b180d-4b1b-4b13-8f05-a367ae2cd105)
+
+![image](https://github.com/user-attachments/assets/0c68ecf6-94f4-4e67-9cfa-ade7ffcd2cd0)
+
+![image](https://github.com/user-attachments/assets/cf478b45-a321-4ab4-ad53-c7320174c1ae)
+
+![image](https://github.com/user-attachments/assets/5809b552-ce83-4455-81c2-80515ff68997)
+
+![image](https://github.com/user-attachments/assets/b39d24b3-807f-4ef5-a3b6-cce19931b7b6)
+
+![image](https://github.com/user-attachments/assets/402809b7-2c88-494a-9f46-d3512af22f64)
+
+![image](https://github.com/user-attachments/assets/d9806c9f-4ba5-491d-92ef-05e7fa5d6cee)
+
+![image](https://github.com/user-attachments/assets/c83aa9c8-992d-45a9-864a-50c1b7f1b1ee)
+
+![image](https://github.com/user-attachments/assets/55b5aa7b-9497-40fd-a282-ca23aae34661)
+
+
 ## Soal No 2
 
 ## Soal No 3
