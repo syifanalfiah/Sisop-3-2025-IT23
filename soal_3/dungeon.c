@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <time.h>
@@ -20,6 +19,7 @@ typedef struct {
     char equipped[MAX_NAME];
     Weapon inv[MAX_INV];
     int inv_count;
+    int kills;  // Menambahkan kill count
 } Player;
 
 // --- Utility Functions ---
@@ -65,13 +65,16 @@ void show_stats(Player* p, int sock) {
             break;
         }
     }
+
     char resp[BUF_SZ];
     snprintf(resp, sizeof(resp),
         "\x1b[95m=== Player Stats ===\x1b[0m\n"
         "\x1b[33mGold:\x1b[0m %d    "
         "\x1b[32mEquipped Weapon:\x1b[0m %s |  "
-        "\x1b[31mBase Damage:\x1b[0m %d\n%s\n",
-        p->gold, p->equipped, p->base_damage, passive_line);
+        "\x1b[31mBase Damage:\x1b[0m %d\n"
+        "\x1b[36mKills:\x1b[0m %d\n%s\n",
+        p->gold, p->equipped, p->base_damage, p->kills, passive_line);
+
     send(sock, resp, strlen(resp), 0);
 }
 
@@ -177,9 +180,11 @@ void handle_battle(Player* P, int sock) {
             if (monster_hp <= 0) {
                 int reward = rand_range(50, 100);
                 P->gold += reward;
+                P->kills++;
+            
                 offset += snprintf(output + offset, BUF_SZ - offset,
                     "\x1b[92mMusuh dikalahkan!\x1b[0m Kamu mendapat \x1b[33m%d gold\x1b[0m.\n\n", reward);
-
+            
                 monster_hp = rand_range(50, 200);
                 monster_max = monster_hp;
                 print_healthbar(monster_hp, monster_max, bar);
@@ -195,7 +200,7 @@ void handle_battle(Player* P, int sock) {
 
 void handle_client(int sock) {
     char buf[BUF_SZ];
-    Player P = {500, 5, "", {}, 0};
+    Player P = {500, 5, "", {}, 0, 0};
     Weapon fists = make_fists();
     strcpy(P.equipped, fists.name);
     add_inv(&P, fists);
@@ -245,32 +250,15 @@ void handle_client(int sock) {
     close(sock);
 }
 
-void* client_thread(void* arg) {
-    int sock = *(int*)arg;
-    free(arg);
-    handle_client(sock);
-    return NULL;
-}
-
 int main() {
     int sd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in a = {AF_INET, htons(PORT), INADDR_ANY};
     bind(sd, (struct sockaddr*)&a, sizeof(a));
-    listen(sd, 10);
+    listen(sd, 3);
     printf("Dungeon server berjalan di port %d...\n", PORT);
-
     while (1) {
-        int* cs = malloc(sizeof(int)); // alokasi pointer untuk thread
-        *cs = accept(sd, NULL, NULL);
-        if (*cs >= 0) {
-            pthread_t tid;
-            pthread_create(&tid, NULL, client_thread, cs);
-            pthread_detach(tid); // detach supaya tidak perlu join
-        } else {
-            free(cs);
-        }
+        int cs = accept(sd, NULL, NULL);
+        if (cs >= 0) handle_client(cs);
     }
-
-    close(sd);
     return 0;
 }
