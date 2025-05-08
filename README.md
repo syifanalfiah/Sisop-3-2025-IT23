@@ -571,7 +571,7 @@ void cleanup(int sig) {
     exit(0);
 }
 
-/system
+// system
 void logout() {
     shmdt(shared_data); 
     logged_in = 0;
