@@ -1,4 +1,4 @@
-# Laporan Praktikum Modul 3
+![image](https://github.com/user-attachments/assets/a1d40dab-e1dc-48e7-aa5d-f730a4263cc8)# Laporan Praktikum Modul 3
 
 ## Nama Anggota
 
@@ -1099,6 +1099,9 @@ int main() {
 ./delivery_agent
 
 - melakukan pengiriman secara expres
+
+melihat delivery.log 
+![image](https://github.com/user-attachments/assets/0ba7c125-9bde-49e1-8418-ea39828c53ce)
 
 ## Soal No 3
 
