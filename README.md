@@ -35,7 +35,7 @@ Shared memory dan semaphore digunakan untuk memastikan sinkronisasi antar proses
 ### Inisialisasi Shared Memory & Semaphore
 
 ```c
-/system
+// system
 void init_shared_memory() {
     key_t key = get_system_key();
     shmid = shmget(key, sizeof(struct SystemData), IPC_CREAT | 0666);
@@ -82,7 +82,7 @@ Fungsi-fungsi ini digunakan untuk mengakses/membuat shared memory dan mengatur s
 ### Registrasi dan Login Hunter
 
 ```c
-/hunter
+// hunter
 void register_hunter() {
     struct Hunter new_hunter;
     printf("
@@ -184,7 +184,7 @@ Login berhasil!
 ### Notifikasi Dungeon (Multithreading)
 
 ```c
-/hunter
+// hunter
 void* notification_thread(void* arg) {
     while (atomic_load(&notification_on)) {
         lock();
@@ -235,7 +235,7 @@ void toggle_notification() {
 ### Generate dan Tampilkan Dungeon
 
 ```c
-/system
+// system
 void generate_dungeon() {
     lock();
     
@@ -294,7 +294,7 @@ void show_dungeons() {
 ### Info dan Pengelolaan Hunter
 
 ```c
-/system
+// system
 void show_hunters() {
     lock();
     
@@ -369,7 +369,7 @@ void reset_hunter() {
 ### Fitur Dungeon untuk Hunter
 
 ```c
-/hunter
+// hunter
 void show_available_dungeons() {
     lock();
     
@@ -471,6 +471,7 @@ void raid_dungeon() {
 ### Battle Hunter
 
 ```c
+// hunter
 void battle_hunter() {
     lock();
     
@@ -561,7 +562,7 @@ void battle_hunter() {
 ### Shutdown dan Logout
 
 ```c
-/hunter
+// hunter
 void cleanup(int sig) {
     printf("\nMembersihkan shared memory...\n");
     shmdt(shared_data);
@@ -620,7 +621,7 @@ gcc -o hunter hunter.c -pthread
 
 ### menu
 ```c
-/hunter
+// hunter
 int main() {
     srand(time(NULL));
     init_shared_memory();
@@ -654,7 +655,7 @@ int main() {
     return 0;
 }
 
-/system
+// system
 int main() {
     signal(SIGINT, cleanup);
     signal(SIGTERM, cleanup);
@@ -693,7 +694,7 @@ int main() {
 ```
 
 ### Revisi
-penambahan
+penambahan pada hunter.c
 ```c
 #include <stdatomic.h>
 ```
