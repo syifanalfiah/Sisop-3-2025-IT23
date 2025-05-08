@@ -549,7 +549,7 @@ Client menyediakan menu interaktif dengan pilihan:
 4. Create sample file
 5. Exit
 
-## Spesifikasi Berdasarkan Cerita Soal
+### Spesifikasi Berdasarkan Cerita Soal
 
 | Fitur | Deskripsi |
 |-------|-----------|
