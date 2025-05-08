@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/a1d40dab-e1dc-48e7-aa5d-f730a4263cc8)# Laporan Praktikum Modul 3
+# Laporan Praktikum Modul 3
 
 ## Nama Anggota
 
@@ -675,6 +675,13 @@ Client menyediakan menu interaktif dengan pilihan:
 6. Client dapat mendownload file JPEG hasil dekripsi dari server
 
 ### Revisi
+Tidak terdecrypt menjadi jpeg (hasilnya tidak terformat dengan benar dan memutuskan tidak bisa di revisi)
+
+### Kendala
+Hasil tidak dapat diselesaikan sebagai jpeg asumsi saya tidak terdecrypt dengan benar, sudah berusaha mengubah buffer size, mengubah function handle client tetap tidak berhasil.
+
+![image](https://github.com/user-attachments/assets/85d3fade-25a2-496e-a71e-e63c7d02409a)
+
 
 ### Dokumentasi
 
@@ -1099,6 +1106,8 @@ int main() {
 ./delivery_agent
 
 - melakukan pengiriman secara expres
+
+![image](https://github.com/user-attachments/assets/a1d40dab-e1dc-48e7-aa5d-f730a4263cc8)
 
 melihat delivery.log 
 ![image](https://github.com/user-attachments/assets/0ba7c125-9bde-49e1-8418-ea39828c53ce)
