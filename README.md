@@ -1166,7 +1166,7 @@ void logout() {
 
 Gunakan perintah berikut untuk meng-compile dua file utama:
 
-```c
+```bash
 gcc -o system system.c -pthread
 gcc -o hunter hunter.c -pthread
 ```
@@ -1175,13 +1175,13 @@ gcc -o hunter hunter.c -pthread
 
 1. Jalankan `system` terlebih dahulu untuk menginisialisasi shared memory:
 
-```c
+```bash
 ./system
 ```
 
 2. Jalankan `hunter` di terminal lain untuk hunter register/login:
 
-```c
+```bash
 ./hunter
 ```
 
